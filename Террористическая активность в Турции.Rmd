@@ -1,0 +1,245 @@
+---
+title: "Террористическая активность в Турции"
+author: "Мёнин | myonin@ya.ru"
+date: '26 июля 2016 г '
+output: html_document
+---
+###[silentio.su](http://silentio.su/)
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(openxlsx)
+library(ggmap)
+
+setwd("~/Документы/DATA")
+
+# #Создание субсета по Турции
+# setwd("~/Документы/RAW DATA")
+# #The Global Terrorism Database (GTD) by University of Maryland
+# #Сайт: https://www.start.umd.edu/gtd/contact/
+# terror <- read.xlsx("The Global Terrorism Database 1970-2015.xlsx",
+#                     sheet = 1)
+# terror.Turkey <- subset(terror, country_txt == "Turkey")
+# setwd("~/Документы/DATA")
+# write.csv(terror.Turkey, "The Global Terrorism Database - Turkey 1970-2015.csv")
+
+#Субсет по Турции
+terror.Turkey <- read.csv("The Global Terrorism Database - Turkey 1970-2015.csv")
+
+#Данные по количеству терактах и погибших
+terror.count <- subset(terror.Turkey, select = c(iyear, nkill))
+terror.count$nkill[is.na(terror.count$nkill)] <- 0
+terror.count$nacts <- 1
+
+#Общее количество терактов и погибших по годам в Турции
+terror.count <- summarise(group_by(terror.count, iyear), sum(nkill), sum(nacts))
+terror.count <- gather(terror.count, key, value, -iyear)
+terror.count$key <- as.factor(terror.count$key)
+levels(terror.count$key) <- c("теракты", "убитые")
+
+# #Создание субсета по России
+# setwd("~/Документы/RAW DATA")
+# #The Global Terrorism Database (GTD) by University of Maryland
+# #Сайт: https://www.start.umd.edu/gtd/contact/
+# terror <- read.xlsx("The Global Terrorism Database 1970-2015.xlsx",
+#                     sheet = 1)
+# terror.Russia <- subset(terror, country_txt == "Russia")
+# setwd("~/Документы/DATA")
+# write.csv(terror.Russia, "The Global Terrorism Database - Russia 1992-2015.csv")
+
+#Oбщее количество терактов в России и Турции
+#
+terror.RUS <- read.csv("The Global Terrorism Database - Russia 1992-2015.csv")
+terror.RUS <- subset(terror.RUS, select = c(iyear))
+terror.RUS <- count(terror.RUS, iyear)
+terror.RUS$Country <- "Россия"
+terror.TUR <- subset(terror.Turkey, select = c(iyear))
+terror.TUR <- count(terror.TUR, iyear)
+terror.TUR$Country <- "Турция"
+terror <- rbind(terror.TUR, terror.RUS)
+
+#График "Террористическая активность в Турции и России"
+ggplot(terror, aes(x = iyear, y = n, colour = Country))+
+    geom_line()+
+    geom_point()+
+    ggtitle("Террористическая активность в Турции и России") +
+    labs(x = "\n
+         Источник: Университет Мэриленда © silentio.su", 
+         y = "количество", colour = " ")+
+    theme(legend.position = "top")
+
+#Теракты по целям (1975-1980, 1987-1997, 2011-2015)
+tagets <- subset(terror.Turkey, iyear >= 1975 & iyear <= 1980 |
+                     iyear >= 1987 & iyear <= 1997 |
+                     iyear >= 2011 & iyear <= 2015, 
+                 select = c(iyear, targtype1_txt))
+
+for(i in 1:length(tagets$iyear)){
+    if(tagets$iyear[i] >= 1975 & tagets$iyear[i] <= 1980){
+        tagets$iyear[i] <- "1975-1980"
+    }
+    else if(tagets$iyear[i] >= 1987 & tagets$iyear[i] <= 1997){
+        tagets$iyear[i] <- "1987-1997"
+    }
+    else if(tagets$iyear[i] >= 2011 & tagets$iyear[i] <= 2015){
+        tagets$iyear[i] <- "2011-2015"
+    }
+}
+
+tagets <- count(tagets, iyear, targtype1_txt)
+sum.by.year <- data.frame(summarise(group_by(tagets, iyear), sum(n)))
+tagets <- merge(tagets, sum.by.year, by = "iyear")
+tagets$Percents <- round(tagets$n/tagets$sum.n.*100, digits = 0)
+tagets$targtype1_txt <- as.character(tagets$targtype1_txt)
+
+for(i in 1:length(tagets$targtype1_txt)){
+    if(tagets$targtype1_txt[i] != "Business" & 
+       tagets$targtype1_txt[i] != "Educational Institution" &
+       tagets$targtype1_txt[i] != "Government (Diplomatic)" &
+       tagets$targtype1_txt[i] != "Government (General)" &
+       tagets$targtype1_txt[i] != "Military" &
+       tagets$targtype1_txt[i] != "Police" &
+       tagets$targtype1_txt[i] != "Private Citizens & Property"){
+        tagets$targtype1_txt[i] <- "Другое"  
+    }
+}
+
+#Русификация
+tagets$targtype1_txt <- as.factor(tagets$targtype1_txt)
+levels(tagets$targtype1_txt) <- c("Другое",
+                                  "Бизнес",
+                                  "Университеты и школы",
+                                  "Дипломаты",
+                                  "Чиновники",
+                                  "Армия",
+                                  "Полиция",
+                                  "Граждане")
+
+#График "Основные цели террористов в Турции в периоды наибольшей террористической активности"
+ggplot(subset(tagets, targtype1_txt != "Другое" & 
+                  targtype1_txt != "Университеты и школы" &
+                  targtype1_txt != "Дипломаты"), 
+       aes(fill = targtype1_txt, y = Percents, x = as.factor(iyear)))+
+    geom_bar(stat = "identity", position = "dodge")+
+    ggtitle("Основные цели террористов в Турции")+
+    labs(x = "Периоды наибольшей террористической активности\n
+         Источник: Университет Мэриленда © silentio.su", 
+         y = "% от всех целей", fill = " ")+
+    geom_text(aes(label = paste0(Percents, "%")), 
+              position = position_dodge(1), vjust=0)
+
+#Теракты по террористическим организациям (1975-1980, 1987-1997, 2011-2015)
+groups <- subset(terror.Turkey, iyear >= 1975 & iyear <= 1980 |
+                     iyear >= 1987 & iyear <= 1997 |
+                     iyear >= 2011 & iyear <= 2015, 
+                 select = c(iyear, gname))
+
+for(i in 1:length(groups$iyear)){
+    if(groups$iyear[i] >= 1975 & groups$iyear[i] <= 1980){
+        groups$iyear[i] <- "1975-1980"
+    }
+    else if(groups$iyear[i] >= 1987 & groups$iyear[i] <= 1997){
+        groups$iyear[i] <- "1987-1997"
+    }
+    else if(groups$iyear[i] >= 2011 & groups$iyear[i] <= 2015){
+        groups$iyear[i] <- "2011-2015"
+    }
+}
+
+groups <- count(groups, iyear, gname)
+sum.by.year <- data.frame(summarise(group_by(groups, iyear), sum(n)))
+groups <- merge(groups, sum.by.year, by = "iyear")
+groups$Percents <- round(groups$n/groups$sum.n.*100, digits = 0)
+groups$gname <- as.character(groups$gname)
+groups.subset <- subset(groups, Percents > 1 & gname != "Unknown")
+groups.subset$gname <- as.factor(groups.subset$gname)
+levels(groups.subset$gname) <- c("Армянская секретная армия",
+                                 "Революционные левые (Dev Sol)",
+                                 "Революционные левые (DHKP-C)",
+                                 "ИГИЛ",
+                                 "Рабочая партия Курдистана",
+                                 "Народно-освободительная армия Турции",
+                                 "Революционные  левые (THKP-C)")
+
+#График "Наиболее активные террористические организации в Турции"
+ggplot(groups.subset, aes(x = iyear, y = Percents, fill = gname))+
+    geom_bar(stat = "identity", position = "dodge")+
+    geom_text(aes(label = paste0(Percents, "%")), 
+              position = position_dodge(1), vjust=0)+
+    ggtitle("Наиболее активные террористы в Турции")+
+    labs(x = "Периоды наибольшей террористической активности\n
+         Источник: Университет Мэриленда © silentio.su", 
+         y = "% от всех совершённых терактов", fill = " ")
+
+# #Министерство культуры и туризма Турции,
+# #Number of Arrivals and Nights Spent,Average lenght of Stay and Occupancy 
+# #Rate in Establishments by Proviences (муниципалитет) - 2015 год.
+# #Ссылка на данные:
+# #http://yigm.kulturturizm.gov.tr/TR,9858/belediye-belgeli-tesisler.html
+# 
+# tourists1 <- read.csv("Минтур Турции - Иностранные туристы по регионам (муниципалитет) 2015.csv")
+# tourists1$Region <- as.character(tourists1$Region)
+# tourists1 <- subset(tourists1, Region != "" & Region != "TÜRKİYE ")
+# tourists1$Tourists <- as.character(tourists1$Tourists)
+# tourists1$Tourists <- as.numeric(tourists1$Tourists)
+# 
+# #Министерство культуры и туризма Турции,
+# #Number of Arrivals and Nights Spent,Average lenght of Stay and Occupancy 
+# #Rate in Establishments by Proviences (бизнес) - 2015 год.
+# #Ссылка на данные:
+# #http://yigm.kulturturizm.gov.tr/TR,9857/isletme-belgeli-tesisler.html
+# 
+# tourists2 <- read.csv("Минтур Турции - Иностранные туристы по регионам (бизнес) 2015.csv")
+# 
+# for(i in 2:length(tourists2$Region)){
+#     if(tourists2$Region[i] == ""){
+#         tourists2$Region[i] <- tourists2$Region[i-1]
+#     }
+# }
+# 
+# tourists2$Tourists <- as.character(tourists2$Tourists)
+# tourists2$Tourists <- as.numeric(tourists2$Tourists)
+# tourists2 <- summarise(group_by(tourists2, Region), max(Tourists, na.rm = T))
+# colnames(tourists2) <- c("Region", "Tourists")
+# tourists2$Region <- as.character(tourists2$Region)
+# tourists2 <- na.omit(tourists2)
+# tourists2 <- subset(tourists2, Region != "GENEL TOPLAM")
+# 
+# tourists <- merge(tourists1, tourists2, by = "Region", all = T)
+# tourists$Tourists.y[tourists$Region == "KIRIKKALE"] <- 0
+# tourists$Tourists <- rowSums(tourists[,2:3])
+# tourists <- subset(tourists, select = c(Region, Tourists))
+# tourists$Percents <- round(tourists$Tourists/sum(tourists$Tourists)*100,
+#                            digits = 2)
+# #Добавление географических координат
+# tourists <- cbind(tourists, geocode(tourists$Region))
+# write.csv(tourists, "Минтур Турции - Иностранные туристы по регионам (всего) 2015.csv")
+
+tourists <- read.csv("Минтур Турции - Иностранные туристы по регионам (всего) 2015.csv")
+
+#Данные по количеству терактах c географическими координатами
+terror.geo <- subset(terror.Turkey, select = c(iyear, latitude, longitude))
+terror.geo <- na.omit(terror.geo)
+terror.geo <- subset(terror.geo, iyear >= 2011 & iyear <= 2015)
+
+map <- get_map(location = "Turkey", maptype = "terrain",
+               zoom = 5)
+ggmap(map)+
+    stat_density2d(data = terror.geo, aes(x = longitude, y = latitude),
+                   geom = "polygon", alpha=0, colour = "red")+
+    geom_point(data = subset(tourists, Percents > 0), 
+               aes(x = lon, y = lat, size = Percents),
+               colour = "blue")+
+    ylim(35, 42.5)+
+    xlim(25, 46)+
+    ggtitle("Туристические направления (2015 г.) и терроризм (2011-2015 гг.) в Турции") +
+    labs(x = "Источники: Университет Мэриленда, Минкульттур Турции © silentio.su", 
+         y = " ", size = "Распределение туристов по зонам террорист. активности, %:")+
+    theme(legend.position = "top")
+```
+
+#### Ссылки на данные:
+* [The Global Terrorism Database (GTD) by University of Maryland](https://www.start.umd.edu/gtd/contact/)
+
+### [Вернуться на Главную](http://silentio.su/)
