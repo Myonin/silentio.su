@@ -1,0 +1,172 @@
+---
+title: "Террористическая активность во Франции"
+author: "Мёнин | myonin@ya.ru"
+date: '14 августа 2016 г '
+output: html_document
+---
+###[silentio.su](http://silentio.su/)
+```{r}
+# Разведочный анализ террористической активности во Франции
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(ggmap)
+
+setwd("~/Документы/DATA")
+
+# Источник данных: The Global Terrorism Database (GTD) by University of Maryland
+# Сайт: https://www.start.umd.edu/gtd/contact/
+terror.France <- read.csv("The Global Terrorism Database - France 1970-2015.csv")
+
+# Сравнение количества терактов в России и Франции
+terror.RUS <- read.csv("The Global Terrorism Database - Russia 1992-2015.csv")
+terror.RUS <- subset(terror.RUS, select = c(iyear))
+terror.RUS <- count(terror.RUS, iyear)
+terror.RUS$Country <- "Россия"
+terror.FR <- subset(terror.France, select = c(iyear))
+terror.FR <- count(terror.FR, iyear)
+terror.FR$Country <- "Франция"
+terror <- rbind(terror.FR, terror.RUS)
+
+# График "Террористическая активность в России и Франции"
+ggplot(terror, aes(x = iyear, y = n, colour = Country))+
+    geom_line()+
+    geom_point()+
+    ggtitle("Террористическая активность в России и Франции") +
+    labs(x = "Годы\n
+         Источник: Университет Мэриленда © silentio.su", 
+         y = "количество терактов", colour = " ")+
+    theme(legend.position = "top")
+
+# Максимальное количество терактов во Франции - 270 в 1996 году
+terror$iyear[terror$n == max(terror$n[terror$Country == "Франция"])]
+
+# Максимальное количество терактов в России - 251 в 2010 году
+terror$iyear[terror$n == max(terror$n[terror$Country == "Россия"])]
+
+# C 1970 по 1997 во Франции произошло 2190 терактов (84 за год)
+sum(terror$n[terror$iyear >= 1972 & terror$iyear <= 1997 & 
+                 terror$Country == "Франция"])
+
+# С 1998 по 2015 во Франции произошло 427 терактов (24 за год)
+sum(terror$n[terror$iyear >= 1998 & terror$iyear <= 2015 & 
+        terror$Country == "Франция"])
+
+# За всю новейшую историю России (с 1992 по 2015 гг.) произошло 2104 теракта 
+# (88 за год)
+sum(terror$n[terror$Country == "Россия"])
+
+# Сравнение количества жертв терактов в России и Франции
+terror.RUS.nkill <- read.csv("The Global Terrorism Database - Russia 1992-2015.csv")
+terror.RUS.nkill <- subset(terror.RUS.nkill, select = c(iyear, nkill))
+terror.RUS.nkill <- summarise(group_by(terror.RUS.nkill, iyear), sum(nkill, na.rm = T))
+terror.RUS.nkill$Country <- "Россия"
+terror.FR.nkill <- subset(terror.France, select = c(iyear, nkill))
+terror.FR.nkill <- summarise(group_by(terror.FR.nkill, iyear), sum(nkill, na.rm = T))
+terror.FR.nkill$Country <- "Франция"
+terror.nkill <- rbind(terror.FR.nkill, terror.RUS.nkill)
+colnames(terror.nkill) <- c("iyear", "nkill", "Country")
+
+# График "Количества жертв терактов в России и Франции"
+ggplot(terror.nkill, aes(x = iyear, y = nkill, colour = Country))+
+    geom_line()+
+    geom_point()+
+    facet_grid(Country ~ ., scales = "free")+
+    ggtitle("Количество погибших в результате терактов") +
+    labs(x = "Годы\n
+         Источник: Университет Мэриленда © silentio.su", 
+         y = "количество погибших", colour = " ")+
+    theme(legend.position = "top")
+
+# Теракты во Франции по террористическим организациям
+gnames <- subset(terror.France, select = c(iyear, gname))
+gnames <- count(gnames, gname, iyear)
+
+# Вычисление доли терактов, совершенных террористической организацией за всё время,
+# от всего количества терактов за всё время
+gnames.all <- subset(terror.France, select = c(gname))
+gnames.all <- count(gnames, gname)
+gnames.all$Percents <- round(gnames.all$nn/sum(gnames.all$nn)*100, digits = 0)
+gnames.all <- subset(gnames.all, Percents > 1)
+gnames.all$gname <- as.character(gnames.all$gname)
+gnames.all$gname <- as.factor(gnames.all$gname)
+levels(gnames.all$gname) <- c("Прямое действие", # https://en.wikipedia.org/wiki/Action_directe_(armed_group)
+                              "Армянская секретная армия",
+                              "ЭТА",
+                              "Фронт освобождения Бретани",
+                              "Нацфронт освобождения Корсики",
+                              "Корсиканские сепаратисты",
+                              "Северяне (баски)",
+                              "Сепаратисты",
+                              "Одиночки",
+                              "Неизвестно")
+
+gnames.all$gname <- reorder(gnames.all$gname, gnames.all$Percents)
+
+# График "Наиболее активные террористические организации во Франции за всё время"
+ggplot(gnames.all, aes(x = gname, y = Percents))+
+    geom_bar(stat = "identity", colour = "black", fill = "white")+
+    coord_flip()+
+    ggtitle("Топ 10 террористических организаций во Франции") +
+    labs(y = "% от всех совершённых терактов, 1972-2015 гг.\n
+         Источник: Университет Мэриленда © silentio.su", 
+         x = " ")+
+    geom_text(aes(label = paste0(Percents, "%")), 
+              colour = "black", hjust=1.2)
+
+# Вычисление количества терактов по годам
+for(i in 1972:2015){
+    gnames$sum.per.year[gnames$iyear == i] <- sum(gnames$n[gnames$iyear == i])
+}
+
+# Вычисление доли терактов, совершенных террористической организацией за год,
+# от всего количества терактов за год
+gnames$Percents <- round(gnames$n/gnames$sum.per.year*100, digits = 0)
+
+# Наиболее активные террористические организации во Франции (доля за год > 20%)
+gnames.subset <- subset(gnames, Percents >= 20 & gname != "Unknown")
+gnames.subset$gname <- as.character(gnames.subset$gname)
+gnames.subset$gname <- as.factor(gnames.subset$gname)
+levels(gnames.subset$gname) <- c("Ополчение за права животных", # https://en.wikipedia.org/wiki/Animal_Rights_Militia
+                                 "Армянская секретная армия", # https://en.wikipedia.org/wiki/Armenian_Secret_Army_for_the_Liberation_of_Armenia
+                                 "Нацфронт освобождения Корсики", # https://en.wikipedia.org/wiki/National_Liberation_Front_of_Corsica
+                                 "Нацфронт освобождения Корсики (HCh)",
+                                 "Революционные интернационалисты", # https://en.wikipedia.org/wiki/Revolutionary_Internationalist_Action_Groups
+                                 "ИГИЛ",
+                                 "Сепаратисты",
+                                 "Исламисты-одиночки")
+
+# График "Наиболее активные террористические организации во Франции"
+ggplot(gnames.subset, aes(x = iyear, y = Percents, fill = gname))+
+    geom_bar(stat = "identity", position = "dodge")+
+    ggtitle(expression(atop("Активные террористические группы во Франции", 
+                            atop(italic("вклад в террористическую активность >20% всех терактов за год")))))+
+    labs(x = "Годы\n
+         Источник: Университет Мэриленда © silentio.su", 
+         y = "% от всех совершённых терактов за год", fill = " ")
+# Исламисты заявили о себе только к 2015 году, доведя количество терактов до 50%,
+# 42% совершили неизвестные. Breton Liberation Front - 14% в 2014 г., 
+# National Liberation Front of Provence - 7% в 2014 г.
+
+#Данные по количеству терактах c географическими координатами
+terror.geo <- subset(terror.France, select = c(iyear, latitude, longitude))
+terror.geo <- na.omit(terror.geo)
+
+map <- get_map(location = "France", maptype = "terrain",
+               zoom = 5)
+ggmap(map)+
+    geom_point(data = terror.geo, 
+               aes(x = longitude, y = latitude),
+               colour = "red", alpha = 0.5)+
+    ylim(42, 51)+
+    xlim(-3, 11)+
+    ggtitle("Террористическая активность во Франции с 1972 по 2015 гг.\n") +
+    labs(x = "Источники: Университет Мэриленда © silentio.su", 
+         y = " ")
+```
+
+#### Ссылки на данные:
+* [The Global Terrorism Database (GTD) by University of Maryland](https://www.start.umd.edu/gtd/contact/)
+
+### [Вернуться на Главную](http://silentio.su/)
