@@ -1,0 +1,349 @@
+---
+title: "Партии РФ в твиттере (облако тегов)"
+author: "Мёнин | myonin@ya.ru"
+date: '7 августа 2016 г '
+output: html_document
+---
+###[silentio.su](http://silentio.su/)
+```{r}
+# Контент-анализ твиттер-аккаунтов политических партий России
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(twitteR)
+library(ROAuth)
+library(tm)
+library(wordcloud)
+
+setwd("~/Документы/DATA")
+
+# 1. ЕДИНАЯ РОССИЯ
+
+# setup_twitter_oauth(consumer_key = " ",
+#                     consumer_secret = " ",
+#                     access_token = " ",
+#                     access_secret = " ")
+# 
+# tweets.edro <- userTimeline("er_novosti", n = 3200)
+# tweets.edro <- twListToDF(tweets.edro)
+# save(tweets.edro,file="Твитты - Единая Россия (edro).Rda")
+
+load("Твитты - Единая Россия (edro).Rda")
+
+# Построение корпуса текстов
+corpus.edro <- Corpus(VectorSource(as.vector(tweets.edro$text)))
+corpus.edro <- tm_map(corpus.edro,
+                              content_transformer(function(x) iconv(x, to='UTF-8', sub='byte')),
+                              mc.cores=1
+)
+# Удаление ссылок
+corpus.edro <- tm_map(corpus.edro, PlainTextDocument)
+removeURL <- function(x) gsub("http[^[:space:]]*", "", x)
+corpus.edro <- tm_map(corpus.edro, content_transformer(removeURL))
+# Конвертация в нижний регистр
+corpus.edro <- tm_map(corpus.edro, content_transformer(tolower))
+# Удаление пунктуации
+corpus.edro <- tm_map(corpus.edro, removePunctuation)
+# Удаление стоп-слов
+corpus.edro <- tm_map(corpus.edro, removeWords, c(stopwords("russian")))
+# Удаление поисковых слов
+corpus.edro <- tm_map(corpus.edro, removeWords, c("единая россия", "едро", 
+                                                  "единороссы", "erlenta",
+                                                  "sandymustache",
+                                                  "партии",
+                                                  "партия",
+                                                  "единой россии"))
+wordcloud(corpus.edro, max.words = 50, random.order = FALSE,
+          main="Title")
+mtext("Твиттер \"Единой России\". Облако тегов", side=3, line=2)
+mtext("© silentio.su",side=1,line=3)
+
+# 2. ЛДПР
+
+# setup_twitter_oauth(consumer_key = " ",
+#                     consumer_secret = " ",
+#                     access_token = " ",
+#                     access_secret = " ")
+# 
+# tweets.ldpr <- userTimeline("vsezaldpr", n = 3200)
+# tweets.ldpr <- twListToDF(tweets.ldpr)
+# save(tweets.ldpr,file="Твитты - ЛДПР (ldpr).Rda")
+
+load("Твитты - ЛДПР (ldpr).Rda")
+
+# Построение корпуса текстов
+corpus.ldpr <- Corpus(VectorSource(as.vector(tweets.ldpr$text)))
+corpus.ldpr <- tm_map(corpus.ldpr,
+                      content_transformer(function(x) iconv(x, to='UTF-8', sub='byte')),
+                      mc.cores=1
+)
+# Удаление ссылок
+corpus.ldpr <- tm_map(corpus.ldpr, PlainTextDocument)
+corpus.ldpr <- tm_map(corpus.ldpr, content_transformer(removeURL))
+# Конвертация в нижний регистр
+corpus.ldpr <- tm_map(corpus.ldpr, content_transformer(tolower))
+# Удаление пунктуации
+corpus.ldpr <- tm_map(corpus.ldpr, removePunctuation)
+# Удаление стоп-слов
+corpus.ldpr <- tm_map(corpus.ldpr, removeWords, c(stopwords("russian")))
+# Удаление поисковых слов
+corpus.ldpr <- tm_map(corpus.ldpr, removeWords, c("лдпр"))
+wordcloud(corpus.ldpr, max.words = 50, random.order = FALSE,
+          main="Title")
+mtext("Твиттер ЛДПР. Облако тегов", side=3, line=2)
+mtext("© silentio.su",side=1,line=3)
+
+# 3. КПРФ
+
+# setup_twitter_oauth(consumer_key = " ",
+#                     consumer_secret = " ",
+#                     access_token = " ",
+#                     access_secret = " ")
+# 
+# tweets.kprf <- userTimeline("kprf", n = 3200)
+# tweets.kprf <- twListToDF(tweets.kprf)
+# save(tweets.kprf, file="Твитты - КПРФ (kprf).Rda")
+
+load("Твитты - КПРФ (kprf).Rda")
+
+# Построение корпуса текстов
+corpus.kprf <- Corpus(VectorSource(as.vector(tweets.kprf$text)))
+corpus.kprf <- tm_map(corpus.kprf,
+                      content_transformer(function(x) iconv(x, to='UTF-8', sub='byte')),
+                      mc.cores=1
+)
+# Удаление ссылок
+corpus.kprf <- tm_map(corpus.kprf, PlainTextDocument)
+corpus.kprf <- tm_map(corpus.kprf, content_transformer(removeURL))
+# Конвертация в нижний регистр
+corpus.kprf <- tm_map(corpus.kprf, content_transformer(tolower))
+# Удаление пунктуации
+corpus.kprf <- tm_map(corpus.kprf, removePunctuation)
+# Удаление стоп-слов
+corpus.kprf <- tm_map(corpus.kprf, removeWords, c(stopwords("russian")))
+# Удаление поисковых слов
+corpus.kprf <- tm_map(corpus.kprf, removeWords, c("кпрф"))
+wordcloud(corpus.kprf, max.words = 50, random.order = FALSE,
+          main="Title")
+mtext("Твиттер КПРФ. Облако тегов", side=3, line=2)
+mtext("© silentio.su",side=1,line=3)
+
+# 4. Справедливая Россия
+
+# setup_twitter_oauth(consumer_key = " ",
+#                     consumer_secret = " ",
+#                     access_token = " ",
+#                     access_secret = " ")
+# 
+# tweets.spravoross <- userTimeline("spravoross", n = 3200)
+# tweets.spravoross <- twListToDF(tweets.spravoross)
+# save(tweets.spravoross,file="Твитты - Справедливая Россия (spravoross).Rda")
+
+load("Твитты - Справедливая Россия (spravoross).Rda")
+
+# Построение корпуса текстов
+corpus.spravoross <- Corpus(VectorSource(as.vector(tweets.spravoross$text)))
+corpus.spravoross <- tm_map(corpus.spravoross,
+                      content_transformer(function(x) iconv(x, to='UTF-8', sub='byte')),
+                      mc.cores=1
+)
+# Удаление ссылок
+corpus.spravoross <- tm_map(corpus.spravoross, PlainTextDocument)
+corpus.spravoross <- tm_map(corpus.spravoross, content_transformer(removeURL))
+# Конвертация в нижний регистр
+corpus.spravoross <- tm_map(corpus.spravoross, content_transformer(tolower))
+# Удаление пунктуации
+corpus.spravoross <- tm_map(corpus.spravoross, removePunctuation)
+# Удаление стоп-слов
+corpus.spravoross <- tm_map(corpus.spravoross, removeWords, c(stopwords("russian")))
+# Удаление поисковых слов
+corpus.spravoross <- tm_map(corpus.spravoross, removeWords, c("справедливая россия",
+                                                              "справедливаяроссия"))
+wordcloud(corpus.spravoross, max.words = 50, random.order = FALSE,
+          main="Title")
+mtext("Твиттер \"Справедливой России\". Облако тегов", side=3, line=2)
+mtext("© silentio.su",side=1,line=3)
+
+# 5. Партия роста
+
+# setup_twitter_oauth(consumer_key = " ",
+#                     consumer_secret = " ",
+#                     access_token = " ",
+#                     access_secret = " ")
+# 
+# tweets.partrost <- userTimeline("partrost", n = 3200)
+# tweets.partrost <- twListToDF(tweets.partrost)
+# save(tweets.partrost,file="Твитты - Партия роста (partrost).Rda")
+
+load("Твитты - Партия роста (partrost).Rda")
+
+# Построение корпуса текстов
+corpus.partrost <- Corpus(VectorSource(as.vector(tweets.partrost$text)))
+corpus.partrost <- tm_map(corpus.partrost,
+                            content_transformer(function(x) iconv(x, to='UTF-8', sub='byte')),
+                            mc.cores=1
+)
+# Удаление ссылок
+corpus.partrost <- tm_map(corpus.partrost, PlainTextDocument)
+corpus.partrost <- tm_map(corpus.partrost, content_transformer(removeURL))
+# Конвертация в нижний регистр
+corpus.partrost <- tm_map(corpus.partrost, content_transformer(tolower))
+# Удаление пунктуации
+corpus.partrost <- tm_map(corpus.partrost, removePunctuation)
+# Удаление стоп-слов
+corpus.partrost <- tm_map(corpus.partrost, removeWords, c(stopwords("russian")))
+# Удаление поисковых слов
+corpus.partrost <- tm_map(corpus.partrost, removeWords, c("партия роста", "роста",
+                                                          "партии",
+                                                          "партияроста"))
+wordcloud(corpus.partrost, max.words = 50, random.order = FALSE,
+          main="Title")
+mtext("Твиттер \"Партии роста\". Облако тегов", side=3, line=2)
+mtext("© silentio.su",side=1,line=3)
+
+# 6. Партия Родина 
+
+# setup_twitter_oauth(consumer_key = " ",
+#                     consumer_secret = " ",
+#                     access_token = " ",
+#                     access_secret = " ")
+# 
+# tweets.PartiaRodina <- userTimeline("PartiaRodina", n = 3200)
+# tweets.PartiaRodina <- twListToDF(tweets.PartiaRodina)
+# save(tweets.PartiaRodina,file="Твитты - Партия Родина (PartiaRodina).Rda")
+
+load("Твитты - Партия Родина (PartiaRodina).Rda")
+
+# Построение корпуса текстов
+corpus.PartiaRodina <- Corpus(VectorSource(as.vector(tweets.PartiaRodina$text)))
+corpus.PartiaRodina <- tm_map(corpus.PartiaRodina,
+                          content_transformer(function(x) iconv(x, to='UTF-8', sub='byte')),
+                          mc.cores=1
+)
+# Удаление ссылок
+corpus.PartiaRodina <- tm_map(corpus.PartiaRodina, PlainTextDocument)
+corpus.PartiaRodina <- tm_map(corpus.PartiaRodina, content_transformer(removeURL))
+# Конвертация в нижний регистр
+corpus.PartiaRodina <- tm_map(corpus.PartiaRodina, content_transformer(tolower))
+# Удаление пунктуации
+corpus.PartiaRodina <- tm_map(corpus.PartiaRodina, removePunctuation)
+# Удаление стоп-слов
+corpus.PartiaRodina <- tm_map(corpus.PartiaRodina, removeWords, c(stopwords("russian")))
+# Удаление поисковых слов
+corpus.PartiaRodina <- tm_map(corpus.PartiaRodina, removeWords, c("партия", "родина",
+                                                          "родины",
+                                                          "партияродина",
+                                                          "партии",
+                                                          "youtube"))
+wordcloud(corpus.PartiaRodina, max.words = 50, random.order = FALSE,
+          main="Title")
+mtext("Твиттер \"Партии Родина\". Облако тегов", side=3, line=2)
+mtext("© silentio.su",side=1,line=3)
+
+# 7. Партия Яблоко
+
+# setup_twitter_oauth(consumer_key = " ",
+#                     consumer_secret = " ",
+#                     access_token = " ",
+#                     access_secret = " ")
+# 
+# tweets.yabloko <- userTimeline("yabloko", n = 3200)
+# tweets.yabloko<- twListToDF(tweets.yabloko)
+# save(tweets.yabloko,file="Твитты - Яблоко (yabloko).Rda")
+
+load("Твитты - Яблоко (yabloko).Rda")
+
+# Построение корпуса текстов
+corpus.yabloko <- Corpus(VectorSource(as.vector(tweets.yabloko$text)))
+corpus.yabloko <- tm_map(corpus.yabloko,
+                              content_transformer(function(x) iconv(x, to='UTF-8', sub='byte')),
+                              mc.cores=1
+)
+# Удаление ссылок
+corpus.yabloko <- tm_map(corpus.yabloko, PlainTextDocument)
+corpus.yabloko <- tm_map(corpus.yabloko, content_transformer(removeURL))
+# Конвертация в нижний регистр
+corpus.yabloko <- tm_map(corpus.yabloko, content_transformer(tolower))
+# Удаление пунктуации
+corpus.yabloko <- tm_map(corpus.yabloko, removePunctuation)
+# Удаление стоп-слов
+corpus.yabloko <- tm_map(corpus.yabloko, removeWords, c(stopwords("russian")))
+# Удаление поисковых слов
+corpus.yabloko <- tm_map(corpus.yabloko, removeWords, c("это",
+                                                        "lvovalexander"))
+wordcloud(corpus.yabloko, max.words = 50, random.order = FALSE,
+          main="Title")
+mtext("Твиттер партии \"Яблоко\". Облако тэгов", side=3, line=2)
+mtext("© silentio.su",side=1,line=3)
+
+# 8. ПАРНАС
+
+# setup_twitter_oauth(consumer_key = " ",
+#                     consumer_secret = " ",
+#                     access_token = " ",
+#                     access_secret = " ")
+# 
+# tweets.parnasparty <- userTimeline("parnasparty", n = 3200)
+# tweets.parnasparty<- twListToDF(tweets.parnasparty)
+# save(tweets.parnasparty,file="Твитты - ПАРНАС (parnasparty).Rda")
+
+load("Твитты - ПАРНАС (parnasparty).Rda")
+
+# Построение корпуса текстов
+corpus.parnasparty <- Corpus(VectorSource(as.vector(tweets.parnasparty$text)))
+corpus.parnasparty <- tm_map(corpus.parnasparty,
+                         content_transformer(function(x) iconv(x, to='UTF-8', sub='byte')),
+                         mc.cores=1
+)
+# Удаление ссылок
+corpus.parnasparty <- tm_map(corpus.parnasparty, PlainTextDocument)
+corpus.parnasparty <- tm_map(corpus.parnasparty, content_transformer(removeURL))
+# Конвертация в нижний регистр
+corpus.parnasparty <- tm_map(corpus.parnasparty, content_transformer(tolower))
+# Удаление пунктуации
+corpus.parnasparty <- tm_map(corpus.parnasparty, removePunctuation)
+# Удаление стоп-слов
+corpus.parnasparty <- tm_map(corpus.parnasparty, removeWords, c(stopwords("russian")))
+# Удаление поисковых слов
+corpus.parnasparty <- tm_map(corpus.parnasparty, removeWords, c("парнас"))
+wordcloud(corpus.parnasparty, max.words = 50, random.order = FALSE,
+          main="Title")
+mtext("Твиттер ПАРНАС. Облако тэгов", side=3, line=2)
+mtext("© silentio.su",side=1,line=3)
+
+# 9. Гражданская платформа
+
+# setup_twitter_oauth(consumer_key = " ",
+#                     consumer_secret = " ",
+#                     access_token = " ",
+#                     access_secret = " ")
+# 
+# tweets.Civil_Platform <- userTimeline("Civil_Platform", n = 3200)
+# tweets.Civil_Platform<- twListToDF(tweets.Civil_Platform)
+# save(tweets.Civil_Platform,file="Твитты - Гражданская платформа (Civil_Platform).Rda")
+
+load("Твитты - Гражданская платформа (Civil_Platform).Rda")
+
+# Построение корпуса текстов
+corpus.Civil_Platform <- Corpus(VectorSource(as.vector(tweets.Civil_Platform$text)))
+corpus.Civil_Platform <- tm_map(corpus.Civil_Platform,
+                             content_transformer(function(x) iconv(x, to='UTF-8', sub='byte')),
+                             mc.cores=1
+)
+# Удаление ссылок
+corpus.Civil_Platform <- tm_map(corpus.Civil_Platform, PlainTextDocument)
+corpus.Civil_Platform <- tm_map(corpus.Civil_Platform, content_transformer(removeURL))
+# Конвертация в нижний регистр
+corpus.Civil_Platform <- tm_map(corpus.Civil_Platform, content_transformer(tolower))
+# Удаление пунктуации
+corpus.Civil_Platform <- tm_map(corpus.Civil_Platform, removePunctuation)
+# Удаление стоп-слов
+corpus.Civil_Platform <- tm_map(corpus.Civil_Platform, removeWords, c(stopwords("russian")))
+# Удаление поисковых слов
+corpus.Civil_Platform <- tm_map(corpus.Civil_Platform, removeWords, c("партии"))
+wordcloud(corpus.Civil_Platform, max.words = 50, random.order = FALSE,
+          main="Title")
+mtext("Твиттер \"Гражданской платформы\". Облако тэгов", side=3, line=2)
+mtext("© silentio.su",side=1,line=3)
+```
