@@ -1,0 +1,38 @@
+---
+title: "Контент-анализ книги Антона Вайно Образ победы"
+author: "Мёнин | myonin@ya.ru"
+date: '23 августа 2016 г '
+output: html_document
+---
+###[silentio.su](http://silentio.su/)
+```{r}
+# Контент-анализ книги Антона Вайно "Образ победы"
+
+library(tm)
+library(wordcloud)
+
+setwd("~/Документы/RAW DATA")
+
+# Загрузка текста
+vaino.victory <- readLines("Антон Вайно - Образ победы.txt")
+
+# Очистка текста
+vaino.victory <- Corpus(VectorSource(vaino.victory))
+vaino.victory <- tm_map(vaino.victory, PlainTextDocument)
+vaino.victory <- tm_map(vaino.victory, removePunctuation)
+vaino.victory <- tm_map(vaino.victory, removeWords, c(stopwords("russian"),
+                                                      "это",
+                                                      "года",
+                                                      "году",
+                                                      "которые",
+                                                      "ния",
+                                                      "ных"))
+
+# Генерация цветовой палитры и построение облака тегов
+pal <- brewer.pal(9, "BuGn")[-(1:4)]
+wordcloud(vaino.victory, max.words = 100, random.order = F, colors = pal, main = "Title")
+mtext("Контент-анализ книги Антона Вайно \"Образ победы\"", side=3, line=2)
+mtext("© silentio.su",side=1,line=3)
+```
+
+### [Вернуться на Главную](http://silentio.su/)
