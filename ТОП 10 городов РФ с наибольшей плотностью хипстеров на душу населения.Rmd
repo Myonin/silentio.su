@@ -1,0 +1,145 @@
+---
+title: "ТОП 10 городов РФ с наибольшей плотностью хипстеров на душу населения"
+author: "Мёнин | myonin@ya.ru"
+date: '18 августа 2016 г '
+output: html_document
+---
+###[silentio.su](http://silentio.su/)
+```{r}
+# ТОП 10 городов РФ с наибольшей плотностью хипстеров на душу населения.
+# Построен на основании показателей индекса региональной популярности Яндекса
+# по запросам: «вегетарианские рецепты», «жидкость +для электронных сигарет»,
+# «смузи рецепты»
+
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(ggmap)
+
+setwd("~/Документы/DATA")
+
+# Всего показов по фразе «вегетарианские рецепты»: 20 264
+# Tаблица со страницы:
+# https://wordstat.yandex.ru/#!/regions?filter=cities&words=%D0%B2%D0%B5%D0%B3%D0%B5%D1%82%D0%B0%D1%80%D0%B8%D0%B0%D0%BD%D1%81%D0%BA%D0%B8%D0%B5%20%D1%80%D0%B5%D1%86%D0%B5%D0%BF%D1%82%D1%8B
+
+# Загрузка данных
+vegans.yandex <- read.csv("Показы по фразе «вегетарианские рецепты».csv")
+vegans.yandex$city <- as.character(vegans.yandex$city)
+
+# Удаление данных по округам, регионам и районам
+index <- c(grep("образование", vegans.yandex$city, value = TRUE),
+    grep("округ", vegans.yandex$city, value = TRUE),
+    grep("район", vegans.yandex$city, value = TRUE))
+for (i in index){
+    vegans.yandex <- subset(vegans.yandex, city != i)
+}
+vegans.yandex <- na.omit(vegans.yandex)
+
+# Удаление городов с региональным индексом меньше 100
+vegans.yandex <- subset(vegans.yandex, index > 100)
+
+# Добавление колонки с запросом
+vegans.yandex$request <- c("веганы")
+
+# Всего показов по фразе «жидкость +для электронных сигарет»: 146 432
+# Tаблица со страницы:
+# https://wordstat.yandex.ru/#!/regions?filter=cities&words=%D0%B6%D0%B8%D0%B4%D0%BA%D0%BE%D1%81%D1%82%D1%8C%20%2B%D0%B4%D0%BB%D1%8F%20%D1%8D%D0%BB%D0%B5%D0%BA%D1%82%D1%80%D0%BE%D0%BD%D0%BD%D1%8B%D1%85%20%D1%81%D0%B8%D0%B3%D0%B0%D1%80%D0%B5%D1%82
+
+# Загрузка данных
+vapers.yandex <- read.csv("Показы по фразе «жидкость для электронных сигарет».csv")
+vapers.yandex$city <- as.character(vapers.yandex$city)
+
+# Удаление данных по округам, регионам и районам
+index <- c(grep("образование", vapers.yandex$city, value = TRUE),
+           grep("округ", vapers.yandex$city, value = TRUE),
+           grep("район", vapers.yandex$city, value = TRUE))
+for (i in index){
+    vapers.yandex <- subset(vapers.yandex, city != i)
+}
+vapers.yandex <- na.omit(vapers.yandex)
+
+# Удаление городов с региональным индексом меньше 100
+vapers.yandex <- subset(vapers.yandex, index > 100)
+
+# Добавление колонки с запросом
+vapers.yandex$request <- c("вейперы")
+
+# Всего показов по фразе «смузи рецепты»: 31 449
+# Tаблица со страницы:
+# https://wordstat.yandex.ru/#!/regions?filter=cities&words=%D1%81%D0%BC%D1%83%D0%B7%D0%B8%20%D1%80%D0%B5%D1%86%D0%B5%D0%BF%D1%82%D1%8B
+
+# Загрузка данных
+smooth.yandex <- read.csv("Показы по фразе «смузи рецепты».csv")
+smooth.yandex$city <- as.character(smooth.yandex$city)
+
+# Удаление данных по округам, регионам и районам
+index <- c(grep("образование", smooth.yandex$city, value = TRUE),
+           grep("округ", smooth.yandex$city, value = TRUE),
+           grep("район", smooth.yandex$city, value = TRUE))
+for (i in index){
+    smooth.yandex <- subset(smooth.yandex, city != i)
+}
+smooth.yandex <- na.omit(smooth.yandex)
+
+# Удаление городов с региональным индексом меньше 100
+smooth.yandex <- subset(smooth.yandex, index > 100)
+
+# Добавление колонки с запросом
+smooth.yandex$request <- c("смузисты")
+
+# Объединение датасетов
+yandex <- rbind(vegans.yandex, vapers.yandex, smooth.yandex)
+index <- count(yandex, city)
+index <- subset(index, n == 3)
+index <- index[,1]
+yandex <- merge(yandex, index, by = "city")
+yandex$city <- as.factor(yandex$city)
+
+# Вычисление геометрического среднего для трёх региональных индексов
+for (i in levels(yandex$city)){
+    yandex$rate[yandex$city == i] <- (yandex$index[yandex$city == i & yandex$request == "вейперы"]*
+        yandex$index[yandex$city == i & yandex$request == "веганы"]*
+        yandex$index[yandex$city == i & yandex$request == "смузисты"])^(1/3)
+}
+
+# Вычисление ТОП 10 городов с наибольшей плотностью хипстеров
+top.yandex <- subset(yandex, request == "веганы", select = c("city", "rate"))
+top.yandex <- subset(top.yandex, rate > 161)
+top.yandex$city <- top.yandex$city
+top.yandex$city <- as.character(top.yandex$city)
+geo <- geocode(top.yandex$city)
+top.yandex$city <- as.factor(top.yandex$city)
+top.yandex <- cbind(top.yandex, geo)
+top.yandex <- arrange(top.yandex, rate)
+# top.yandex$index <- reorder(top.yandex$index, top.yandex$rate)
+levels(top.yandex$city) <- c("8.Балашиха",
+                             "3.Волжск",
+                             "6.Воткинск",
+                             "9.Дзержинский",
+                             "0.Злынка",
+                             "2.Костомукша",
+                             "7.Краснотурьинск",
+                             "1.Лобня",
+                             "4.Норильск",
+                             "5.Электрогорск")
+
+top.yandex$index <- paste(top.yandex$city, "-", round(top.yandex$rate, digits = 0))
+
+# Загрузка карты России
+map <- get_map(location = c(lon = 50, lat = 60), 
+               source="google", color = "bw", maptype = "roadmap", zoom = 3)
+
+# Карта "ТОП 10 городов РФ с наибольшей плотностью хипстеров"
+ggmap(map)+
+    geom_point(data = top.yandex, 
+               aes(x = lon, y = lat, size = rate, colour = index),
+               alpha = 0.9)+
+    ggtitle("ТОП 10 городов РФ с наибольшей плотностью хипстеров\n") +
+    labs(x = "\n
+         Источник: Университет Мэриленда © silentio.su", 
+         y = " ", size = "Хипстоиндекс:", colour = "Города:")+
+    ylim(30, 75)+
+    xlim(25, 100)
+```
+
+### [Вернуться на Главную](http://silentio.su/)
