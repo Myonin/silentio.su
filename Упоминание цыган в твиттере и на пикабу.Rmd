@@ -1,0 +1,180 @@
+---
+title: "Упоминание цыган в твиттере и на пикабу"
+author: "Мёнин | myonin@ya.ru"
+date: '1 сентября 2016 г '
+output: html_document
+---
+###[silentio.su](http://silentio.su/)
+```{r}
+# Анализ упоминаемости цыган в твиттере и комментариев пользователей пикабу
+# к постам о цыганах
+
+library(rvest)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(twitteR)
+library(ROAuth)
+library(tm)
+library(wordcloud)
+
+setwd("~/Документы/DATA")
+
+# Упоминание цыган в твиттере
+
+# # Авторизация в твиттере
+# setup_twitter_oauth(consumer_key = " ",
+#                     consumer_secret = " ",
+#                     access_token = " ",
+#                     access_secret = " ")
+# 
+# # Поиск твиттов, в которых упоминаются цыгане
+# tweets.gypsy <- searchTwitter("цыгане", n = 3200, resultType = "recent")
+# 
+# # Сохранение твиттов в базу данных
+# tweets.gypsy <- twListToDF(tweets.gypsy)
+# save(tweets.gypsy,file="Твитты - Цыгане 20150901.Rda")
+
+# Загрузка базы данных
+load("Твитты - Цыгане 20150901.Rda")
+
+tweets_time <- data.frame("Date" = tweets.gypsy$created)
+tweets_time$Date <- as.character(tweets_time$Date)
+tweets_time <- separate(tweets_time, Date, into = c("Day", "Time"), sep = " ")
+tweets_time$Day <- as.Date(tweets_time$Day, "%Y-%m-%d")
+
+tweets_time <- count(tweets_time, Day)
+
+# График "Динамика твиттов, содержащих упоминания о цыганах"
+ggplot(tweets_time, aes(x = Day, y = n))+
+    geom_line()+
+    geom_label(aes(label = n))+
+    ggtitle(expression(atop("Интерес к цыганам вырос из-за событий в Лощиновке", 
+                            atop(italic("твитты, которые содержат упоминания о цыганах (23.08-01.09 2016 г.)")))))+
+    labs(x = "Дата\n
+         Источник: Твиттер © silentio.su", 
+         y = "количество твиттов")
+
+# Построение корпуса текстов
+corpus.gypsy <- Corpus(VectorSource(as.vector(tweets.gypsy$text)))
+corpus.gypsy <- tm_map(corpus.gypsy,
+                       content_transformer(function(x) iconv(x, to='UTF-8', sub='byte')),
+                       mc.cores=1
+)
+# Удаление ссылок
+corpus.gypsy <- tm_map(corpus.gypsy, PlainTextDocument)
+removeURL <- function(x) gsub("http[^[:space:]]*", "", x)
+corpus.gypsy <- tm_map(corpus.gypsy, content_transformer(removeURL))
+# Конвертация в нижний регистр
+corpus.gypsy <- tm_map(corpus.gypsy, content_transformer(tolower))
+# Удаление пунктуации
+corpus.gypsy <- tm_map(corpus.gypsy, removePunctuation)
+# Удаление стоп-слов
+corpus.gypsy <- tm_map(corpus.gypsy, removeWords, c(stopwords("russian")))
+# Удаление поисковых слов
+corpus.gypsy <- tm_map(corpus.gypsy, removeWords, c("цыгане"))
+
+# Построение облака тегов
+wordcloud(corpus.gypsy, max.words = 100, random.order = FALSE,
+          main="Title")
+mtext("Сообщения о цыганах в твиттере. Облако тегов", side=3, line=2)
+mtext("Источник: Твиттер © silentio.su", side=1, line=3, cex=0.8)
+
+# Упоминания цыган в комментариях на Пикабу
+
+# # Загрузка страницы по тегу "цыгане"
+# url <- c("http://pikabu.ru/tag/%D1%86%D1%8B%D0%B3%D0%B0%D0%BD%D0%B5")
+# # Создание вектора, содержащего ссылки на тематические посты
+# html <- read_html(url)
+# titles <- html_nodes(html, "a")
+# urls <- html_attr(titles, "href")
+# urls <- grep("http://pikabu.ru/story/", urls, value = T)
+# urls <- urls[-grep("comment", urls, value = F)]
+# urls <- unique(urls)
+# urls <- urls[1:22]
+# 
+# # Парсинг комментариев
+# titles_clean <- c()
+# for(i in 1:length(urls)){
+#     html <- read_html(urls[i])
+#     titles <- html_nodes(html, ".b-comment__content p")
+#     titles <- gsub(".*<p>|</p>.*", "", titles)
+#     titles_clean <- c(titles_clean, titles)
+# }
+# 
+# # Сохранение комментариев в базу данных
+# save(titles_clean,file="Комментарии Пикабу - Цыгане 20150901.Rda")
+
+# Загрузка базы данных
+load("Комментарии Пикабу - Цыгане 20150901.Rda")
+
+# Построение корпуса текстов
+corpus.gypsy <- Corpus(VectorSource(as.vector(titles_clean)))
+corpus.gypsy <- tm_map(corpus.gypsy,
+                       content_transformer(function(x) iconv(x, to='UTF-8', sub='byte')),
+                       mc.cores=1
+)
+# Удаление ссылок
+corpus.gypsy <- tm_map(corpus.gypsy, PlainTextDocument)
+removeURL <- function(x) gsub("http[^[:space:]]*", "", x)
+corpus.gypsy <- tm_map(corpus.gypsy, content_transformer(removeURL))
+# Конвертация в нижний регистр
+corpus.gypsy <- tm_map(corpus.gypsy, content_transformer(tolower))
+# Удаление пунктуации
+corpus.gypsy <- tm_map(corpus.gypsy, removePunctuation)
+# Удаление стоп-слов
+corpus.gypsy <- tm_map(corpus.gypsy, removeWords, c(stopwords("russian")))
+# Удаление поисковых слов
+corpus.gypsy <- tm_map(corpus.gypsy, removeWords, c("цыгане",
+                                                    "цыган",
+                                                    "цыганок",
+                                                    "это",
+                                                    "цыганки",
+                                                    "цыганка",
+                                                    "эта",
+                                                    "которые",
+                                                    "href",
+                                                    "noindexa",
+                                                    "noindex",
+                                                    "targetblank",
+                                                    "targetblankadminanoindex",
+                                                    "relnofollow",
+                                                    "этих",
+                                                    "который",
+                                                    "фото"))
+
+wordcloud(corpus.gypsy, max.words = 25, random.order = FALSE,
+          main="Title")
+mtext("Сообщения о цыганах в комментариях на Пикабу. Облако тегов", side=3, line=2)
+mtext("Источник: Пикабу © silentio.su", side=1, line=3, cex=0.8)
+
+# За что не любят цыган в России?
+
+gypsy_crimes <- data.frame(crimes = c("вымогательство", "грабежи", "воровство",
+                             "торговля наркотиками", "попрошайничество",
+                             "убийства", "мошенничество", "изнасилование"),
+                           value = c(length(grep(c("вымог"), titles_clean, value = T)),
+length(grep(c("граб"), titles_clean, value = T)),
+length(grep(c("вор"), titles_clean, value = T)),
+length(grep(c("нарк"), titles_clean, value = T)),
+length(grep(c("попрош"), titles_clean, value = T)),
+length(grep(c("убив"), titles_clean, value = T)),
+length(grep(c("мошенни"), titles_clean, value = T)),
+length(grep(c("насило"), titles_clean, value = T))))
+
+gypsy_crimes$Percents <- round(gypsy_crimes$value/sum(gypsy_crimes$value)*100,
+                                                      digits = 0)
+gypsy_crimes$crimes <- reorder(gypsy_crimes$crimes, gypsy_crimes$Percents)
+
+ggplot(gypsy_crimes, aes(x = crimes, y = Percents))+
+    geom_bar(stat='identity')+
+    coord_flip()+
+    ggtitle(expression(atop("За что не любят цыган в России?", 
+                            atop(italic("% от общего количества негативных комментариев"))))) +
+    labs(y = "%\n
+         Источник: Пикабу © silentio.su", 
+         x = " ")+
+    geom_label(aes(label = paste0(Percents,"%")))
+```
+
+### [Вернуться на Главную](http://silentio.su/)
