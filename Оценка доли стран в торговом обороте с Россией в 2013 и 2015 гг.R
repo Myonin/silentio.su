@@ -49,16 +49,23 @@ sum_data_custom$Значение <- round(sum_data_custom$Значение/(10^9
 
 # Импорт в 2015 г. упал на 42% по сравнению с 2013, экспорт - на 35%.
 
+# Датасет по торговому обороту с другого раздела сайта:
+# http://stat.customs.ru/apex/f?p=201:7:1904119482513115::NO
+data_custom2 <- read.csv("Итоги внешней торговли РФ.csv", dec = ",")
+data_custom2 <- data_custom2 %>%
+    gather(Оборот, Значение, -Год)
+data_custom2$Значение <- round(data_custom2$Значение/(1000), digits = 0)
+
 # График "Торговый оборот России со странами мира"
-ggplot(sum_data_custom, aes(x = Год, y = Значение, colour = Оборот2))+
+ggplot(data_custom2, aes(x = Год, y = Значение, colour = Оборот))+
     geom_line()+
     geom_point()+
     ggtitle("Торговый оборот России со странами мира")+
     geom_text(aes(label = paste0("$", Значение, " млрд")), 
               colour = "black", vjust = -1)+
     scale_x_continuous(name = "Год\n",
-                       breaks = c(seq(2013, 2015, 1)), 
-                       limits = c(2013, 2015))+
+                       breaks = c(seq(2011, 2015, 1)), 
+                       limits = c(2011, 2015))+
     scale_y_continuous(name = "млрд долларов США")+
     theme(legend.title = element_blank(),
           legend.position = "top",
