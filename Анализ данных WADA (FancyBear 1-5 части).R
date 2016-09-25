@@ -14,6 +14,7 @@ setwd("~/Документы/DATA")
 # Загрузка данных WADA, выложенных хакерской группой "FancyBear
 # Ссылка на сайт с данными: https://fancybear.net/
 # Ссылка на датасет:
+# https://docs.google.com/spreadsheets/d/17ueEGzhS_z9J03W1OE3_YGhs7oj2KChavvH3S5r5VHI/edit?usp=sharing
 
 # Загрузка данных
 wada <- read.csv("WADA databases by FancyBear Part 1-5 2016-09-23.csv",
